@@ -1,0 +1,19 @@
+node_modules
+.expo
+dist
+
+# Environment variables — never commit real secrets
+.env
+.env.local
+.env.*.local
+
+# Native config files with real API keys
+android/app/google-services.json
+ios/GoogleService-Info.plist
+
+# Android signing
+*.keystore
+*.jks
+
+# macOS
+.DS_Store
