@@ -40,19 +40,26 @@ export async function registerForPushNotifications(): Promise<string | null> {
     projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID
   })).data;
 
-  // Save token to employee/kitchen_owner profile
-  const user = getCurrentUser();
-  if (user && token) {
-    try {
-      const employeeSnap = await getDocs(query(collection(db, "employees"), where("uid", "==", user.uid)));
-      if (!employeeSnap.empty) {
-        await updateDoc(employeeSnap.docs[0].ref, { pushToken: token }).catch(() => {});
-      }
-      await updateDoc(doc(db, "kitchen_owners", user.uid), { pushToken: token }).catch(() => {});
-    } catch { /* non-fatal */ }
-  }
+  await saveTokenToFirestore(token);
+
+  // Refresh token if it rotates
+  Notifications.addPushTokenListener(async ({ data: newToken }) => {
+    await saveTokenToFirestore(newToken);
+  });
 
   return token;
+}
+
+async function saveTokenToFirestore(token: string) {
+  const user = getCurrentUser();
+  if (!user || !token) return;
+  try {
+    const employeeSnap = await getDocs(query(collection(db, "employees"), where("uid", "==", user.uid)));
+    if (!employeeSnap.empty) {
+      await updateDoc(employeeSnap.docs[0].ref, { pushToken: token }).catch(() => {});
+    }
+    await updateDoc(doc(db, "kitchen_owners", user.uid), { pushToken: token }).catch(() => {});
+  } catch { /* non-fatal */ }
 }
 
 export function addNotificationListener(

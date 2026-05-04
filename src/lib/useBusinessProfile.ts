@@ -1,5 +1,5 @@
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { db, getCurrentUser } from "./firebase";
 
 export type BusinessRole =
@@ -21,16 +21,24 @@ export type BusinessProfile = {
   roleId?: string;
 };
 
-export function useBusinessProfile(): { profile: BusinessProfile | null; loading: boolean; error: string | null } {
+export function useBusinessProfile(): { profile: BusinessProfile | null; loading: boolean; error: string | null; retry: () => void } {
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const retry = useCallback(() => {
+    setError(null);
+    setLoading(true);
+    setRetryCount(c => c + 1);
+  }, []);
 
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) { setLoading(false); return; }
 
     let active = true;
+    const unsubs: (() => void)[] = [];
 
     void (async () => {
       try {
@@ -48,6 +56,16 @@ export function useBusinessProfile(): { profile: BusinessProfile | null; loading
             restaurantName: String(d.restaurantName ?? "")
           });
           setLoading(false);
+          // Live-listen for kitchen_owner profile changes (e.g. restaurantName update)
+          unsubs.push(onSnapshot(doc(db, "kitchen_owners", user.uid), (snap) => {
+            if (!snap.exists() || !active) return;
+            const data = snap.data();
+            setProfile(prev => prev ? {
+              ...prev,
+              name: String(data.name ?? prev.name),
+              restaurantName: String(data.restaurantName ?? prev.restaurantName ?? "")
+            } : prev);
+          }));
           return;
         }
 
@@ -68,8 +86,6 @@ export function useBusinessProfile(): { profile: BusinessProfile | null; loading
           }
 
           const roleId = String(empData.roleId ?? "");
-
-          // Resolve role name
           let roleName = "unknown";
           let permissions: string[] = [];
           if (roleId) {
@@ -97,6 +113,15 @@ export function useBusinessProfile(): { profile: BusinessProfile | null; loading
             roleId
           });
           setLoading(false);
+
+          // Live-listen for suspension — kicks user out immediately if admin suspends them
+          unsubs.push(onSnapshot(doc(db, "employees", employeeDoc.id), (snap) => {
+            if (!snap.exists() || !active) return;
+            if (snap.data().status !== "active") {
+              setProfile(null);
+              setError("Your business app access has been suspended. Contact your admin.");
+            }
+          }));
           return;
         }
 
@@ -112,10 +137,13 @@ export function useBusinessProfile(): { profile: BusinessProfile | null; loading
       }
     })();
 
-    return () => { active = false; };
-  }, []);
+    return () => {
+      active = false;
+      unsubs.forEach(u => u());
+    };
+  }, [retryCount]);
 
-  return { profile, loading, error };
+  return { profile, loading, error, retry };
 }
 
 export function hasBusinessPermission(profile: BusinessProfile | null, permission: string): boolean {

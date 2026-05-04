@@ -2,7 +2,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { httpsCallable } from "firebase/functions";
 import { db, functions, getCurrentUser, businessSignOut } from "@/lib/firebase";
@@ -47,7 +47,7 @@ export default function DriverDashboard() {
 function DriverDashboardContent() {
   const router = useRouter() as { replace: (href: string) => void; push: (href: string) => void };
   const { profile } = useBusinessProfile();
-  const { assignedOrders: orders, availableOrders, ordersLoading: loading, startOrderSubscriptions } = useBusinessStore();
+  const { assignedOrders: orders, availableOrders, ordersLoading: loading, startOrderSubscriptions, addPendingUpdate, flushPendingUpdates, pendingUpdates } = useBusinessStore();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
   const [tab, setTab] = useState<"assigned" | "available">("assigned");
@@ -55,11 +55,18 @@ function DriverDashboardContent() {
 
   const user = getCurrentUser();
 
-  // Start shared store subscriptions instead of local ones
   useEffect(() => {
     if (!user) return;
     startOrderSubscriptions(user.uid);
   }, [user, startOrderSubscriptions]);
+
+  // Flush pending offline updates when app comes back to foreground
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") void flushPendingUpdates();
+    });
+    return () => sub.remove();
+  }, [flushPendingUpdates]);
 
   // Start broadcasting GPS when on_delivery
   useEffect(() => {
@@ -90,7 +97,13 @@ function DriverDashboardContent() {
       setTrackingOrderId(orderId);
       setTab("assigned");
     } catch (err: unknown) {
-      Alert.alert("Error", (err as Error).message);
+      const msg = (err as Error).message ?? "";
+      if (msg.includes("network") || msg.includes("unavailable")) {
+        addPendingUpdate({ orderId, status: "on_delivery", driverName: profile?.name });
+        Alert.alert("Offline", "You're offline. This will sync automatically when you reconnect.");
+      } else {
+        Alert.alert("Error", msg);
+      }
     } finally {
       setUpdatingId(null);
     }
@@ -107,7 +120,13 @@ function DriverDashboardContent() {
       if (nextStatus === "on_delivery") setTrackingOrderId(order.id);
       if (nextStatus === "delivered") setTrackingOrderId(null);
     } catch (err: unknown) {
-      Alert.alert("Error", (err as Error).message);
+      const msg = (err as Error).message ?? "";
+      if (msg.includes("network") || msg.includes("unavailable")) {
+        addPendingUpdate({ orderId: order.id, status: nextStatus, driverName: profile?.name });
+        Alert.alert("Offline", "You're offline. This will sync automatically when you reconnect.");
+      } else {
+        Alert.alert("Error", msg);
+      }
     } finally {
       setUpdatingId(null);
     }
@@ -129,6 +148,26 @@ function DriverDashboardContent() {
         <View style={styles.trackingBanner}>
           <MaterialIcons name="location-on" size={16} color="#1a0d06" />
           <Text style={styles.trackingText}>Live GPS active — broadcasting location</Text>
+        </View>
+      )}
+
+      {pendingUpdates.length > 0 && (
+        <View style={styles.offlineBanner}>
+          <MaterialIcons name="cloud-off" size={16} color="#f8a91f" />
+          <Text style={styles.offlineText}>{pendingUpdates.length} update{pendingUpdates.length > 1 ? "s" : ""} pending sync</Text>
+          <Pressable onPress={() => void flushPendingUpdates()} style={styles.retrySync}>
+            <Text style={styles.retrySyncText}>Retry</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {pendingUpdates.length > 0 && (
+        <View style={styles.offlineBanner}>
+          <MaterialIcons name="cloud-off" size={16} color="#f8a91f" />
+          <Text style={styles.offlineText}>{pendingUpdates.length} update{pendingUpdates.length > 1 ? "s" : ""} pending sync</Text>
+          <Pressable onPress={() => void flushPendingUpdates()} style={styles.retrySync}>
+            <Text style={styles.retrySyncText}>Retry</Text>
+          </Pressable>
         </View>
       )}
 
@@ -246,6 +285,10 @@ const styles = StyleSheet.create({
   subtitle: { color: "#6b3a1f", fontSize: 13, marginTop: 2 },
   trackingBanner: { backgroundColor: "#ff7941", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
   trackingText: { color: "#1a0d06", fontWeight: "800", fontSize: 13 },
+  offlineBanner: { backgroundColor: "#2a1508", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#f8a91f33" },
+  offlineText: { color: "#f8a91f", fontWeight: "700", fontSize: 12, flex: 1 },
+  retrySync: { backgroundColor: "#f8a91f22", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  retrySyncText: { color: "#f8a91f", fontWeight: "800", fontSize: 11 },
   tabRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 8 },
   tabBtn: { flex: 1, paddingVertical: 10, borderRadius: 999, backgroundColor: "#2a1508", alignItems: "center" },
   tabBtnActive: { backgroundColor: "#ff7941" },

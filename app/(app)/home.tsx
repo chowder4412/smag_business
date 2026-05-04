@@ -7,7 +7,7 @@ import { businessSignOut } from "@/lib/firebase";
 
 export default function HomeScreen() {
   const router = useRouter() as { replace: (href: string) => void };
-  const { profile, loading, error } = useBusinessProfile();
+  const { profile, loading, error, retry } = useBusinessProfile();
 
   if (loading) {
     return (
@@ -27,6 +27,9 @@ export default function HomeScreen() {
           <MaterialIcons name="error-outline" size={48} color="#fb5151" />
           <Text style={styles.errorTitle}>Access Denied</Text>
           <Text style={styles.errorText}>{error ?? "Profile not found."}</Text>
+          <Pressable style={styles.retryBtn} onPress={retry}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </Pressable>
           <Pressable style={styles.signOutBtn} onPress={() => { void businessSignOut().then(() => router.replace("/(auth)/login")); }}>
             <Text style={styles.signOutText}>Sign Out</Text>
           </Pressable>
@@ -90,6 +93,8 @@ const styles = StyleSheet.create({
   loadingText: { color: "#805032", fontSize: 15, marginTop: 12 },
   errorTitle: { color: "#ffd4bd", fontSize: 22, fontWeight: "900" },
   errorText: { color: "#805032", fontSize: 14, textAlign: "center", lineHeight: 20 },
+  retryBtn: { marginTop: 12, backgroundColor: "#2a1508", borderRadius: 999, paddingHorizontal: 24, paddingVertical: 12 },
+  retryText: { color: "#ff7941", fontWeight: "800" },
   signOutBtn: { marginTop: 16, backgroundColor: "#2a1508", borderRadius: 999, paddingHorizontal: 24, paddingVertical: 12 },
   signOutText: { color: "#fb5151", fontWeight: "800" },
   content: { flex: 1, padding: 24 },

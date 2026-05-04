@@ -15,21 +15,30 @@ type Order = {
   restaurantId?: string;
 };
 
+type PendingUpdate = {
+  orderId: string;
+  status: string;
+  driverName?: string;
+  retries: number;
+};
+
 type BusinessStore = {
-  // Auth / profile
   profile: BusinessProfile | null;
   setProfile: (p: BusinessProfile | null) => void;
 
-  // Orders assigned to this user
   assignedOrders: Order[];
   availableOrders: Order[];
   ordersLoading: boolean;
 
-  // Subscriptions (stored so we can unsubscribe)
+  // Offline queue — status updates that failed due to network
+  pendingUpdates: PendingUpdate[];
+  addPendingUpdate: (update: Omit<PendingUpdate, "retries">) => void;
+  removePendingUpdate: (orderId: string) => void;
+  flushPendingUpdates: () => Promise<void>;
+
   _unsubAssigned: Unsubscribe | null;
   _unsubAvailable: Unsubscribe | null;
 
-  // Actions
   startOrderSubscriptions: (uid: string, restaurantId?: string) => void;
   stopOrderSubscriptions: () => void;
 };
@@ -42,27 +51,51 @@ export const useBusinessStore = create<BusinessStore>((set, get) => ({
   availableOrders: [],
   ordersLoading: true,
 
+  pendingUpdates: [],
+  addPendingUpdate: (update) => set((s) => ({
+    pendingUpdates: [
+      ...s.pendingUpdates.filter(p => p.orderId !== update.orderId),
+      { ...update, retries: 0 }
+    ]
+  })),
+  removePendingUpdate: (orderId) => set((s) => ({
+    pendingUpdates: s.pendingUpdates.filter(p => p.orderId !== orderId)
+  })),
+  flushPendingUpdates: async () => {
+    const { pendingUpdates, removePendingUpdate } = get();
+    if (pendingUpdates.length === 0) return;
+    const { httpsCallable } = await import("firebase/functions");
+    const { functions } = await import("./firebase");
+    for (const update of pendingUpdates) {
+      try {
+        const fn = httpsCallable(functions, "updateOrderStatus");
+        await fn({ orderId: update.orderId, status: update.status, driverName: update.driverName });
+        removePendingUpdate(update.orderId);
+      } catch {
+        // Will retry on next flush
+        set(s => ({
+          pendingUpdates: s.pendingUpdates.map(p =>
+            p.orderId === update.orderId ? { ...p, retries: p.retries + 1 } : p
+          ).filter(p => p.retries < 5) // drop after 5 attempts
+        }));
+      }
+    }
+  },
+
   _unsubAssigned: null,
   _unsubAvailable: null,
 
   startOrderSubscriptions: (uid, restaurantId) => {
-    // Stop any existing subscriptions first
     get().stopOrderSubscriptions();
 
-    // Assigned orders — driver sees their own, kitchen sees their restaurant
     const assignedQ = restaurantId
       ? query(collection(db, "orders"), where("restaurantId", "==", restaurantId), where("status", "in", ["confirmed", "preparing", "on_delivery"]))
       : query(collection(db, "orders"), where("assignedDriverUid", "==", uid), where("status", "in", ["confirmed", "preparing", "on_delivery"]));
 
     const unsubAssigned = onSnapshot(assignedQ, (snap) => {
-      set({
-        assignedOrders: snap.docs.map((d) => ({ id: d.id, ...d.data() } as Order)),
-        ordersLoading: false
-      });
+      set({ assignedOrders: snap.docs.map((d) => ({ id: d.id, ...d.data() } as Order)), ordersLoading: false });
     }, () => set({ ordersLoading: false }));
 
-    // Available orders on_delivery not yet assigned to a driver
-    // Orders are created with assignedDriverUid: "" so this query works
     const availQ = query(
       collection(db, "orders"),
       where("status", "==", "on_delivery"),
