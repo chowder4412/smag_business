@@ -2,6 +2,7 @@
   "expo": {
     "name": "Smag Business",
     "slug": "smag-business",
+    "owner": "mustylo",
     "scheme": "smag-business",
     "version": "1.0.0",
     "runtimeVersion": {
@@ -29,20 +30,33 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-notifications", {
-        "icon": "./assets/icon.png",
-        "color": "#ff7941",
-        "sounds": []
-      }],
-      ["expo-location", {
-        "locationWhenInUsePermission": "Allow Smag Business to use your location for delivery tracking."
-      }],
-      ["react-native-maps", { "googleMapsApiKey": "$(GOOGLE_MAPS_API_KEY)" }]
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ff7941",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Smag Business to use your location for delivery tracking."
+        }
+      ],
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "$(GOOGLE_MAPS_API_KEY)"
+        }
+      ]
     ],
-    "experiments": { "typedRoutes": true },
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
+        "projectId": "066e941f-efb4-44a3-a03a-ed9bc46afc03"
       }
     }
   }

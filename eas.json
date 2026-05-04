@@ -7,7 +7,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_EAS_PROJECT_ID": "YOUR_EAS_PROJECT_ID"
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "066e941f-efb4-44a3-a03a-ed9bc46afc03"
       }
     },
     "preview": {
@@ -16,13 +16,13 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_EAS_PROJECT_ID": "YOUR_EAS_PROJECT_ID"
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "066e941f-efb4-44a3-a03a-ed9bc46afc03"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_EAS_PROJECT_ID": "YOUR_EAS_PROJECT_ID"
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "066e941f-efb4-44a3-a03a-ed9bc46afc03"
       }
     }
   },
