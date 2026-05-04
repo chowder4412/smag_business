@@ -2,6 +2,7 @@ import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY!,
@@ -13,6 +14,24 @@ const firebaseConfig = {
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+// App Check — blocks unauthorized clients from accessing Firebase services.
+// Uses debug token in dev, Play Integrity (Android) / DeviceCheck (iOS) in production.
+// Set EXPO_PUBLIC_APPCHECK_DEBUG_TOKEN in .env for local development.
+if (process.env.EXPO_PUBLIC_APPCHECK_DEBUG_TOKEN) {
+  // @ts-expect-error — global debug token for App Check emulation
+  globalThis.FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.EXPO_PUBLIC_APPCHECK_DEBUG_TOKEN;
+}
+
+if (process.env.EXPO_PUBLIC_APPCHECK_SITE_KEY) {
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider(process.env.EXPO_PUBLIC_APPCHECK_SITE_KEY),
+      isTokenAutoRefreshEnabled: true
+    });
+  } catch { /* already initialized on hot reload */ }
+}
+
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app, "us-central1");

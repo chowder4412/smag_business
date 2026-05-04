@@ -24,10 +24,9 @@ export default function KitchenOwnerDashboard() {
 
 function KitchenOwnerDashboardContent({ profile }: { profile: ReturnType<typeof useBusinessProfile>["profile"] }) {
   const router = useRouter() as { replace: (href: string) => void; push: (href: string) => void };
-  const { assignedOrders: orders, startOrderSubscriptions } = useBusinessStore();
+  const { assignedOrders: orders, ordersLoading, startOrderSubscriptions } = useBusinessStore();
   const [tab, setTab] = useState<"orders" | "menu">("orders");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [loading] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [newItem, setNewItem] = useState({ name: "", description: "", price: "", category: "" });
   const [addingItem, setAddingItem] = useState(false);
@@ -111,7 +110,7 @@ function KitchenOwnerDashboardContent({ profile }: { profile: ReturnType<typeof 
 
       <ScrollView contentContainerStyle={styles.list}>
         {tab === "orders" ? (
-          loading ? <ActivityIndicator color="#4caf50" style={{ marginTop: 60 }} /> :
+          ordersLoading ? <ActivityIndicator color="#4caf50" style={{ marginTop: 60 }} /> :
           orders.length === 0 ? (
             <View style={styles.empty}>
               <MaterialIcons name="receipt-long" size={48} color="#2a1508" />
