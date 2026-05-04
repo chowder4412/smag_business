@@ -14,17 +14,17 @@ type MenuItem = { id: string; name: string; description: string; price: number; 
 type Order = { id: string; status: string; total: number; items: { name: string; quantity: number }[]; createdAtIso?: string };
 
 export default function KitchenOwnerDashboard() {
+  const { profile, loading, error } = useBusinessProfile();
   return (
-    <BusinessAccessGuard permission="business_menu" role="kitchen_owner">
-      <KitchenOwnerDashboardContent />
+    <BusinessAccessGuard permission="business_menu" role="kitchen_owner" profile={profile} loading={loading} error={error}>
+      <KitchenOwnerDashboardContent profile={profile} />
     </BusinessAccessGuard>
   );
 }
 
-function KitchenOwnerDashboardContent() {
+function KitchenOwnerDashboardContent({ profile }: { profile: ReturnType<typeof useBusinessProfile>["profile"] }) {
   const router = useRouter() as { replace: (href: string) => void; push: (href: string) => void };
-  const { profile } = useBusinessProfile();
-  const { assignedOrders: orders, ordersLoading: ordersLoadingFromStore, startOrderSubscriptions } = useBusinessStore();
+  const { assignedOrders: orders, startOrderSubscriptions } = useBusinessStore();
   const [tab, setTab] = useState<"orders" | "menu">("orders");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading] = useState(false);

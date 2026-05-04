@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { collection, onSnapshot, query, orderBy, limit, where } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions, businessSignOut } from "@/lib/firebase";
 import { useBusinessProfile } from "@/lib/useBusinessProfile";
@@ -13,16 +13,16 @@ type Order = { id: string; restaurantName: string; status: string; total: number
 type Employee = { id: string; name: string; email: string; status: string; roleId: string };
 
 export default function ManagerDashboard() {
+  const { profile, loading, error } = useBusinessProfile();
   return (
-    <BusinessAccessGuard permission="business_team" role="manager">
-      <ManagerDashboardContent />
+    <BusinessAccessGuard permission="business_team" role="manager" profile={profile} loading={loading} error={error}>
+      <ManagerDashboardContent profile={profile} />
     </BusinessAccessGuard>
   );
 }
 
-function ManagerDashboardContent() {
+function ManagerDashboardContent({ profile }: { profile: ReturnType<typeof useBusinessProfile>["profile"] }) {
   const router = useRouter() as { replace: (href: string) => void };
-  const { profile } = useBusinessProfile();
   const [tab, setTab] = useState<"orders" | "team">("orders");
   const [orders, setOrders] = useState<Order[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import * as Linking from "expo-linking";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { subscribeAuthState } from "@/lib/firebase";
+import { subscribeAuthState, auth } from "@/lib/firebase";
 import { registerForPushNotifications, addNotificationListener } from "@/lib/notifications";
 import { useBusinessStore } from "@/lib/store";
 import { getDoc, doc } from "firebase/firestore";
@@ -59,7 +59,6 @@ export default function RootLayout() {
     if (!isSignedIn) return;
     void (async () => {
       try {
-        const { auth } = await import("@/lib/firebase");
         const uid = auth.currentUser?.uid;
         if (!uid) return;
         // Try kitchen_owner first

@@ -1,10 +1,10 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from "firebase/firestore";
-import { db, businessSignOut, getCurrentUser } from "@/lib/firebase";
+import { db, businessSignOut } from "@/lib/firebase";
 import { useBusinessProfile } from "@/lib/useBusinessProfile";
 import { BusinessAccessGuard } from "@/components/BusinessAccessGuard";
 
@@ -12,16 +12,16 @@ type ChatSession = { id: string; userId: string; lastMessage: string; updatedAt:
 type Message = { id: string; from: "user" | "agent"; text: string; createdAt: string };
 
 export default function ConciergeDashboard() {
+  const { profile, loading, error } = useBusinessProfile();
   return (
-    <BusinessAccessGuard permission="business_support" role="concierge">
-      <ConciergeDashboardContent />
+    <BusinessAccessGuard permission="business_support" role="concierge" profile={profile} loading={loading} error={error}>
+      <ConciergeDashboardContent profile={profile} />
     </BusinessAccessGuard>
   );
 }
 
-function ConciergeDashboardContent() {
+function ConciergeDashboardContent({ profile }: { profile: ReturnType<typeof useBusinessProfile>["profile"] }) {
   const router = useRouter() as { replace: (href: string) => void };
-  const { profile } = useBusinessProfile();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSession, setActiveSession] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -56,6 +56,8 @@ function ConciergeDashboardContent() {
         createdAt: serverTimestamp()
       });
       setReply("");
+    } catch (err: unknown) {
+      Alert.alert("Error", (err as Error).message ?? "Failed to send message.");
     } finally {
       setSending(false);
     }

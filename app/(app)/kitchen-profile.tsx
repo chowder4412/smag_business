@@ -10,16 +10,16 @@ import { useBusinessProfile } from "@/lib/useBusinessProfile";
 import { BusinessAccessGuard } from "@/components/BusinessAccessGuard";
 
 export default function KitchenProfileScreen() {
+  const { profile, loading, error } = useBusinessProfile();
   return (
-    <BusinessAccessGuard permission="business_menu" role="kitchen_owner">
-      <KitchenProfileContent />
+    <BusinessAccessGuard permission="business_menu" role="kitchen_owner" profile={profile} loading={loading} error={error}>
+      <KitchenProfileContent profile={profile} />
     </BusinessAccessGuard>
   );
 }
 
-function KitchenProfileContent() {
+function KitchenProfileContent({ profile }: { profile: ReturnType<typeof useBusinessProfile>["profile"] }) {
   const router = useRouter() as { back: () => void };
-  const { profile } = useBusinessProfile();
   const restaurantId = profile?.restaurantId;
 
   const [form, setForm] = useState({

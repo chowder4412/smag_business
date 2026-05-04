@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { httpsCallable } from "firebase/functions";
-import { db, functions, getCurrentUser, businessSignOut } from "@/lib/firebase";
+import { functions, getCurrentUser, businessSignOut } from "@/lib/firebase";
 import { useBusinessProfile } from "@/lib/useBusinessProfile";
 import { useBusinessStore } from "@/lib/store";
 import { OrderCardSkeleton } from "@/components/SkeletonLoader";
@@ -37,16 +37,16 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function DriverDashboard() {
+  const { profile, loading, error } = useBusinessProfile();
   return (
-    <BusinessAccessGuard permission="business_driver" role="driver">
-      <DriverDashboardContent />
+    <BusinessAccessGuard permission="business_driver" role="driver" profile={profile} loading={loading} error={error}>
+      <DriverDashboardContent profile={profile} />
     </BusinessAccessGuard>
   );
 }
 
-function DriverDashboardContent() {
+function DriverDashboardContent({ profile }: { profile: ReturnType<typeof useBusinessProfile>["profile"] }) {
   const router = useRouter() as { replace: (href: string) => void; push: (href: string) => void };
-  const { profile } = useBusinessProfile();
   const { assignedOrders: orders, availableOrders, ordersLoading: loading, startOrderSubscriptions, addPendingUpdate, flushPendingUpdates, pendingUpdates } = useBusinessStore();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
@@ -148,16 +148,6 @@ function DriverDashboardContent() {
         <View style={styles.trackingBanner}>
           <MaterialIcons name="location-on" size={16} color="#1a0d06" />
           <Text style={styles.trackingText}>Live GPS active — broadcasting location</Text>
-        </View>
-      )}
-
-      {pendingUpdates.length > 0 && (
-        <View style={styles.offlineBanner}>
-          <MaterialIcons name="cloud-off" size={16} color="#f8a91f" />
-          <Text style={styles.offlineText}>{pendingUpdates.length} update{pendingUpdates.length > 1 ? "s" : ""} pending sync</Text>
-          <Pressable onPress={() => void flushPendingUpdates()} style={styles.retrySync}>
-            <Text style={styles.retrySyncText}>Retry</Text>
-          </Pressable>
         </View>
       )}
 

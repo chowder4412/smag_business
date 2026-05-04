@@ -22,16 +22,16 @@ type Order = {
 };
 
 export default function KitchenStaffDashboard() {
+  const { profile, loading, error } = useBusinessProfile();
   return (
-    <BusinessAccessGuard permission="business_orders" role="kitchen_staff">
-      <KitchenStaffDashboardContent />
+    <BusinessAccessGuard permission="business_orders" role="kitchen_staff" profile={profile} loading={loading} error={error}>
+      <KitchenStaffDashboardContent profile={profile} />
     </BusinessAccessGuard>
   );
 }
 
-function KitchenStaffDashboardContent() {
+function KitchenStaffDashboardContent({ profile }: { profile: ReturnType<typeof useBusinessProfile>["profile"] }) {
   const router = useRouter() as { replace: (href: string) => void };
-  const { profile } = useBusinessProfile();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);

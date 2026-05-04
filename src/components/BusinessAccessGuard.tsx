@@ -1,20 +1,22 @@
-import { MaterialIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { businessSignOut } from "@/lib/firebase";
-import { useBusinessProfile } from "@/lib/useBusinessProfile";
+import type { BusinessProfile } from "@/lib/useBusinessProfile";
 
 type Props = {
   permission: string;
   role?: string;
+  profile: BusinessProfile | null;
+  loading: boolean;
+  error: string | null;
   children: ReactNode;
 };
 
-export function BusinessAccessGuard({ permission, role, children }: Props) {
+export function BusinessAccessGuard({ permission, role, profile, loading, error, children }: Props) {
   const router = useRouter() as { replace: (href: string) => void };
-  const { profile, loading, error } = useBusinessProfile();
   const allowed = profile?.permissions.includes(permission) && (!role || profile.role === role);
 
   if (loading) {
