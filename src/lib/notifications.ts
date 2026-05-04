@@ -36,7 +36,9 @@ export async function registerForPushNotifications(): Promise<string | null> {
     });
   }
 
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
+  const token = (await Notifications.getExpoPushTokenAsync({
+    projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID
+  })).data;
 
   // Save token to employee/kitchen_owner profile
   const user = getCurrentUser();

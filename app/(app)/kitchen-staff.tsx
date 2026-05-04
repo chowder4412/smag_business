@@ -38,9 +38,12 @@ function KitchenStaffDashboardContent() {
 
   useEffect(() => {
     // Filter to Smag Kitchen orders only — kitchen staff don't see external restaurant orders
+    // Internal restaurant IDs are set at order creation time in the customer app
+    const internalIds = (process.env.EXPO_PUBLIC_SMAG_RESTAURANT_IDS ?? "lartiste,luigi,ocean_garden")
+      .split(",").map(s => s.trim()).filter(Boolean);
     const q = query(
       collection(db, "orders"),
-      where("restaurantId", "in", ["lartiste", "luigi", "ocean_garden"]),
+      where("restaurantId", "in", internalIds),
       where("status", "in", ["confirmed", "preparing"])
     );
     const unsub = onSnapshot(q, (snap) => {
