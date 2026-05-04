@@ -35,6 +35,13 @@ function KitchenStaffDashboardContent({ profile }: { profile: ReturnType<typeof 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try { await businessSignOut(); router.replace("/(auth)/login"); }
+    finally { setSigningOut(false); }
+  }
 
   useEffect(() => {
     // Filter to Smag Kitchen orders only — kitchen staff don't see external restaurant orders
@@ -89,8 +96,10 @@ function KitchenStaffDashboardContent({ profile }: { profile: ReturnType<typeof 
           <Text style={styles.title}>Kitchen Dashboard</Text>
           <Text style={styles.subtitle}>{profile?.name ?? ""} · Smag Kitchen</Text>
         </View>
-        <Pressable onPress={() => { void businessSignOut().then(() => router.replace("/(auth)/login")); }}>
-          <MaterialIcons name="logout" size={22} color="#6b3a1f" />
+        <Pressable onPress={handleSignOut} disabled={signingOut}>
+          {signingOut
+            ? <ActivityIndicator color="#6b3a1f" size="small" />
+            : <MaterialIcons name="logout" size={22} color="#6b3a1f" />}
         </Pressable>
       </View>
 

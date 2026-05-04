@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db, businessSignOut } from "@/lib/firebase";
 import { useBusinessProfile } from "@/lib/useBusinessProfile";
 import { BusinessAccessGuard } from "@/components/BusinessAccessGuard";
@@ -27,7 +27,20 @@ function ConciergeDashboardContent({ profile }: { profile: ReturnType<typeof use
   const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try { await businessSignOut(); router.replace("/(auth)/login"); }
+    finally { setSigningOut(false); }
+  }
+
+  function openSession(sessionId: string) {
+    setActiveSession(sessionId);
+    // Reset unread count when concierge opens the session
+    void updateDoc(doc(db, "vip_chat_sessions", sessionId), { unread: 0 }).catch(() => {});
+  }
 
   useEffect(() => {
     const q = query(collection(db, "vip_chat_sessions"), orderBy("updatedAt", "desc"));
@@ -109,8 +122,10 @@ function ConciergeDashboardContent({ profile }: { profile: ReturnType<typeof use
           <Text style={styles.title}>Support Dashboard</Text>
           <Text style={styles.subtitle}>{profile?.name ?? ""} · Concierge</Text>
         </View>
-        <Pressable onPress={() => { void businessSignOut().then(() => router.replace("/(auth)/login")); }}>
-          <MaterialIcons name="logout" size={22} color="#6b3a1f" />
+        <Pressable onPress={handleSignOut} disabled={signingOut}>
+          {signingOut
+            ? <ActivityIndicator color="#6b3a1f" size="small" />
+            : <MaterialIcons name="logout" size={22} color="#6b3a1f" />}
         </Pressable>
       </View>
 
@@ -125,7 +140,7 @@ function ConciergeDashboardContent({ profile }: { profile: ReturnType<typeof use
           </View>
         }
         renderItem={({ item }) => (
-          <Pressable style={styles.sessionCard} onPress={() => setActiveSession(item.id)}>
+          <Pressable style={styles.sessionCard} onPress={() => openSession(item.id)}>
             <View style={styles.sessionIcon}>
               <MaterialIcons name="person" size={22} color="#2196f3" />
             </View>

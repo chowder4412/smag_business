@@ -52,3 +52,19 @@ export function subscribeAuthState(cb: (user: User | null) => void) {
 export function getCurrentUser() {
   return auth.currentUser;
 }
+
+export async function checkAppVersion(): Promise<void> {
+  if (!functions) return;
+  try {
+    const { httpsCallable } = await import("firebase/functions");
+    const fn = httpsCallable<{ version: string }, { supported: boolean; minVersion: string }>(functions, "checkAppVersion");
+    const { data } = await fn({ version: "1.0.0" });
+    if (!data.supported) {
+      throw new Error(`This version of Smag Business is no longer supported. Please update to version ${data.minVersion} or later.`);
+    }
+  } catch (err: unknown) {
+    const msg = (err as Error).message ?? "";
+    // Only throw if it's a version error, not a network/functions error
+    if (msg.includes("no longer supported")) throw err;
+  }
+}

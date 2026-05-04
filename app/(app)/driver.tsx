@@ -51,9 +51,16 @@ function DriverDashboardContent({ profile }: { profile: ReturnType<typeof useBus
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
   const [tab, setTab] = useState<"assigned" | "available">("assigned");
+  const [signingOut, setSigningOut] = useState(false);
   const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const user = getCurrentUser();
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try { await businessSignOut(); router.replace("/(auth)/login"); }
+    finally { setSigningOut(false); }
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -139,8 +146,10 @@ function DriverDashboardContent({ profile }: { profile: ReturnType<typeof useBus
           <Text style={styles.title}>Driver Dashboard</Text>
           <Text style={styles.subtitle}>{profile?.name ?? ""}</Text>
         </View>
-        <Pressable onPress={() => { void businessSignOut().then(() => router.replace("/(auth)/login")); }}>
-          <MaterialIcons name="logout" size={22} color="#6b3a1f" />
+        <Pressable onPress={handleSignOut} disabled={signingOut}>
+          {signingOut
+            ? <ActivityIndicator color="#6b3a1f" size="small" />
+            : <MaterialIcons name="logout" size={22} color="#6b3a1f" />}
         </Pressable>
       </View>
 

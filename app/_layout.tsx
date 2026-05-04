@@ -1,14 +1,16 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, AppState, View } from "react-native";
 import * as Linking from "expo-linking";
+import NetInfo from "@react-native-community/netinfo";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { subscribeAuthState, auth } from "@/lib/firebase";
 import { registerForPushNotifications, addNotificationListener } from "@/lib/notifications";
 import { useBusinessStore } from "@/lib/store";
 import { getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { NetworkBanner } from "@/components/NetworkBanner";
 
 const ROLE_ROUTES: Record<string, string> = {
   driver: "/(app)/driver",
@@ -23,9 +25,33 @@ export default function RootLayout() {
   const segments = useSegments();
   const [authReady, setAuthReady] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const cachedRoleRef = useRef<string | null>(null);
 
   const stopOrderSubscriptions = useBusinessStore((s) => s.stopOrderSubscriptions);
+  const flushPendingUpdates = useBusinessStore((s) => s.flushPendingUpdates);
+
+  // Internet connectivity — show banner + flush queue on reconnect
+  useEffect(() => {
+    const unsub = NetInfo.addEventListener((state) => {
+      const online = Boolean(state.isConnected && state.isInternetReachable !== false);
+      setIsOnline(online);
+      if (online) void flushPendingUpdates();
+    });
+    return () => unsub();
+  }, [flushPendingUpdates]);
+
+  // Session token expiry — re-auth on app foreground
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      auth.currentUser?.getIdToken(true).catch(() => {
+        // Token refresh failed — force sign out
+        void auth.signOut();
+      });
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     return subscribeAuthState((user) => {
@@ -118,6 +144,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
+      <NetworkBanner isOnline={isOnline} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#1a0d06" }, animation: "slide_from_right" }} />
     </SafeAreaProvider>
   );

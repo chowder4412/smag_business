@@ -1,13 +1,34 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusinessProfile } from "@/lib/useBusinessProfile";
-import { businessSignOut } from "@/lib/firebase";
+import { businessSignOut, checkAppVersion } from "@/lib/firebase";
 
 export default function HomeScreen() {
   const router = useRouter() as { replace: (href: string) => void };
   const { profile, loading, error, retry } = useBusinessProfile();
+  const [signingOut, setSigningOut] = useState(false);
+
+  // Version check on mount
+  useEffect(() => {
+    void checkAppVersion().catch((err: unknown) => {
+      Alert.alert("Update Required", (err as Error).message, [
+        { text: "OK", onPress: () => void businessSignOut().then(() => router.replace("/(auth)/login")) }
+      ]);
+    });
+  }, [router]);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await businessSignOut();
+      router.replace("/(auth)/login");
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -30,8 +51,8 @@ export default function HomeScreen() {
           <Pressable style={styles.retryBtn} onPress={retry}>
             <Text style={styles.retryText}>Try Again</Text>
           </Pressable>
-          <Pressable style={styles.signOutBtn} onPress={() => { void businessSignOut().then(() => router.replace("/(auth)/login")); }}>
-            <Text style={styles.signOutText}>Sign Out</Text>
+          <Pressable style={styles.signOutBtn} onPress={handleSignOut} disabled={signingOut}>
+            {signingOut ? <ActivityIndicator color="#fb5151" size="small" /> : <Text style={styles.signOutText}>Sign Out</Text>}
           </Pressable>
         </View>
       </SafeAreaView>
@@ -58,8 +79,10 @@ export default function HomeScreen() {
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.name}>{profile.name}</Text>
           </View>
-          <Pressable onPress={() => { void businessSignOut().then(() => router.replace("/(auth)/login")); }}>
-            <MaterialIcons name="logout" size={22} color="#6b3a1f" />
+          <Pressable onPress={handleSignOut} disabled={signingOut}>
+            {signingOut
+              ? <ActivityIndicator color="#6b3a1f" size="small" />
+              : <MaterialIcons name="logout" size={22} color="#6b3a1f" />}
           </Pressable>
         </View>
 

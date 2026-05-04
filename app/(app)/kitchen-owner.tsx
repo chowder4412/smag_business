@@ -30,8 +30,15 @@ function KitchenOwnerDashboardContent({ profile }: { profile: ReturnType<typeof 
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [newItem, setNewItem] = useState({ name: "", description: "", price: "", category: "" });
   const [addingItem, setAddingItem] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const restaurantId = profile?.restaurantId;
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try { await businessSignOut(); router.replace("/(auth)/login"); }
+    finally { setSigningOut(false); }
+  }
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -91,8 +98,10 @@ function KitchenOwnerDashboardContent({ profile }: { profile: ReturnType<typeof 
           <Text style={styles.title}>{profile?.restaurantName ?? "My Kitchen"}</Text>
           <Text style={styles.subtitle}>{profile?.name ?? ""}</Text>
         </View>
-        <Pressable onPress={() => { void businessSignOut().then(() => router.replace("/(auth)/login")); }}>
-          <MaterialIcons name="logout" size={22} color="#6b3a1f" />
+        <Pressable onPress={handleSignOut} disabled={signingOut}>
+          {signingOut
+            ? <ActivityIndicator color="#6b3a1f" size="small" />
+            : <MaterialIcons name="logout" size={22} color="#6b3a1f" />}
         </Pressable>
         <Pressable onPress={() => router.push("/(app)/kitchen-profile")} style={{ marginLeft: 8 }}>
           <MaterialIcons name="settings" size={22} color="#4caf50" />

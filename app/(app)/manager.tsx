@@ -28,6 +28,13 @@ function ManagerDashboardContent({ profile }: { profile: ReturnType<typeof useBu
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try { await businessSignOut(); router.replace("/(auth)/login"); }
+    finally { setSigningOut(false); }
+  }
 
   useEffect(() => {
     const ordersQ = query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(30));
@@ -65,8 +72,10 @@ function ManagerDashboardContent({ profile }: { profile: ReturnType<typeof useBu
           <Text style={styles.title}>Manager Dashboard</Text>
           <Text style={styles.subtitle}>{profile?.name ?? ""}</Text>
         </View>
-        <Pressable onPress={() => { void businessSignOut().then(() => router.replace("/(auth)/login")); }}>
-          <MaterialIcons name="logout" size={22} color="#6b3a1f" />
+        <Pressable onPress={handleSignOut} disabled={signingOut}>
+          {signingOut
+            ? <ActivityIndicator color="#6b3a1f" size="small" />
+            : <MaterialIcons name="logout" size={22} color="#6b3a1f" />}
         </Pressable>
       </View>
 
