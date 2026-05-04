@@ -10,6 +10,7 @@ dist
 # Native config files with real API keys
 android/app/google-services.json
 ios/GoogleService-Info.plist
+google-services.json
 
 # Android signing
 *.keystore
